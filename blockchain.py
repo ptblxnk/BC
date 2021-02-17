@@ -1,4 +1,4 @@
-from block import Block, genesis, mine_block
+from block import Block
 
 class Blockchain:
     """
@@ -8,13 +8,11 @@ class Blockchain:
 
     # List of blocks and consists of block items
     def __init__(self): 
-        self.chain = [genesis()]
+        self.chain = [Block.genesis()]
     
     def add_block(self, data):
-        last_block = self.chain[-1]
-        #index of -1 pulls the last block of the chain
-
-        self.chain.append(mine_block(last_block, data))
+        #refactored since mine block is only used once
+        self.chain.append(Block.mine_block(self.chain[-1], data))
 
     def __repr__(self):
         return f'Blockchain: {self.chain}'
