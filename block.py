@@ -1,5 +1,5 @@
 import time 
-
+from crypto_hash import crypto_hash
 
 class Block:
     """
@@ -33,7 +33,7 @@ class Block:
         #Gets the last hash by accessing the hash of teh previous block
         last_hash = last_block.hash
         #Constructing the hash based off of all the other values of the block 
-        hash = f'{timestamp}-{last_hash}'
+        hash = crypto_hash(timestamp, last_hash, data)
         #^This will produce a hash value made of both the timestamp and the last hash, which for the 1st block will refernce the genesis block
 
         return Block(timestamp, last_hash, hash, data)
