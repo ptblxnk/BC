@@ -13,3 +13,10 @@ source blockchain-env/bin/activate
 ```
 pip3 install -r requirements.txt
 ```
+
+**RUN the tests**
+Make sure to activate the VENV
+
+```
+python -m pytest backend/tests
+```
