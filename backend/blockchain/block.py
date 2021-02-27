@@ -1,5 +1,7 @@
 import time 
 from backend.util.crypto_hash import crypto_hash
+from backend.util.hex_to_binary import hex_to_binary
+from backend.config import MINE_RATE
 
 #Adding this global variable to ensure the data being used by the genesis method is identical to the data that is being passed through the genesis test 
 GENESIS_DATA ={ 
@@ -7,7 +9,9 @@ GENESIS_DATA ={
     'timestamp': 1,
     'last_hash': 'genesis_last_hash',
     'hash': 'genesis_hash',
-    'data': []
+    'data': [],
+    'difficulty': 3,
+    'nonce': 'genesis_nonce'
 }
 
 class Block:
@@ -16,11 +20,13 @@ class Block:
     Store transactions in a blockchain that supports a cyrptocurrency.
     """
 
-    def __init__(self, timestamp, last_hash, hash, data):
+    def __init__(self, timestamp, last_hash, hash, data, difficulty, nonce):
             self.timestamp = timestamp
             self.last_hash = last_hash
             self.hash = hash
             self.data = data
+            self.difficulty = difficulty
+            self.nonce = nonce
     
     #default representation of the block 
     def __repr__(self):
@@ -29,23 +35,31 @@ class Block:
                 f'timestamp: {self.timestamp}, '
                 f'last_hash: {self.last_hash}, '
                 f'hash: {self.hash}, '
-                f'data: {self.data})'
+                f'data: {self.data}, '
+                f'difficulty: {self.difficulty}, '
+                f'nonce: {self.nonce})'
             )
 
     @staticmethod
     def mine_block(last_block, data):
         """
-        Mine a block based on the given "last_block" and "data".
+        Mine a block based on the given "last_block" and "data", until a block hash is found that meets the leading 0's POW req..
         """
-        #Created a timestamp variable that can call the time_ns method that returns the number of nanoseconds since 1/1/1970
         timestamp = time.time_ns()
-        #Gets the last hash by accessing the hash of teh previous block
         last_hash = last_block.hash
-        #Constructing the hash based off of all the other values of the block 
-        hash = crypto_hash(timestamp, last_hash, data)
-        #^This will produce a hash value made of both the timestamp and the last hash, which for the 1st block will refernce the genesis block
+        # difficulty = last_block.difficulty
+        difficulty = Block.adjust_difficulty (last_block, timestamp)
+        nonce = 0
+        hash = crypto_hash(timestamp, last_hash, data, difficulty, nonce)
 
-        return Block(timestamp, last_hash, hash, data)
+        while hex_to_binary(hash)[0:difficulty] != '0' * difficulty:
+            nonce =+ 1
+            timestamp = time.time_ns()
+            difficulty = Block.adjust_difficulty (last_block, timestamp)
+
+            hash = crypto_hash(timestamp, last_hash, data, difficulty, nonce)
+
+        return Block(timestamp, last_hash, hash, data, difficulty, nonce)
     @staticmethod
     def genesis():
         """
@@ -54,7 +68,22 @@ class Block:
         # return Block(1, 'genesis_last_hash', 'genesis_hash', [])
         return Block(**GENESIS_DATA)
         
-  
+    @staticmethod
+    def adjust_difficulty(last_block, new_timestamp):
+        """
+        Calculate the adjusted difficulty according to the MINE_RATE.
+        Incerease the difficulty for quuickly mined blocks.
+        Decrease teh difficulty for slowly mined blocks.
+        """
+
+        if(new_timestamp - last_block.timestamp) < MINE_RATE:
+            return last_block.difficulty + 1
+        
+        if(last_block.difficulty - 1) > 0:
+            return last_block.difficulty -1
+
+        return 1
+
 def main():
     genesis_block = Block.genesis()
     block = Block.mine_block(genesis_block, 'foo')
