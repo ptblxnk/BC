@@ -40,6 +40,9 @@ class Block:
                 f'nonce: {self.nonce})'
             )
 
+    def __eq__(self, other):
+        return self.__dict__ ==other.__dict__
+
     @staticmethod
     def mine_block(last_block, data):
         """
@@ -60,6 +63,7 @@ class Block:
             hash = crypto_hash(timestamp, last_hash, data, difficulty, nonce)
 
         return Block(timestamp, last_hash, hash, data, difficulty, nonce)
+
     @staticmethod
     def genesis():
         """
@@ -72,8 +76,8 @@ class Block:
     def adjust_difficulty(last_block, new_timestamp):
         """
         Calculate the adjusted difficulty according to the MINE_RATE.
-        Incerease the difficulty for quuickly mined blocks.
-        Decrease teh difficulty for slowly mined blocks.
+        Incerease the difficulty for quickly mined blocks.
+        Decrease the difficulty for slowly mined blocks.
         """
 
         if(new_timestamp - last_block.timestamp) < MINE_RATE:
@@ -84,10 +88,53 @@ class Block:
 
         return 1
 
+    @staticmethod
+    def is_valid_block(last_block, block): 
+        """
+        Validate block by enforcing the following rules:
+          - the block must have the proper last_hash reference
+          - the block must meet the POW requirements
+          - the difficulty must only adjust by 1
+          - the block hash must be a valid combo of the block fields
+        """
+        if block.last_hash != last_block.hash:
+            raise Exception('The block last_hash must be correct')
+
+        if hex_to_binary(block.hash)[0:block.difficulty] != '0' * block.difficulty:
+            raise Exception('The POW requirement was not met')
+
+        if abs(last_block.difficulty - block.difficulty) > 1:
+            raise Exception('The block difficulty must only adjust by 1')
+
+        reconstructed_hash = crypto_hash(
+            block.timestamp,
+            block.last_hash,
+            block.data,
+            block.difficulty,
+            block.nonce
+        )
+
+        if block.hash != reconstructed_hash:
+            raise Exception('The block hash must be correct')
+
+
+
+
 def main():
     genesis_block = Block.genesis()
-    block = Block.mine_block(genesis_block, 'foo')
-    print(block)
+    # block = Block.mine_block(genesis_block, 'foo')
+    # print(block) 
+    # good_block = Block.mine_block(genesis_block, 'foo')
+    #-------TESTING FOR "TAMPERED" DATA------------------
+    bad_block = Block.mine_block(genesis_block, 'foo')
+    bad_block.last_hash = 'evil_data'
+    #----------------------------------------------------
+    
+    try:
+        # Block.is_valid_block(genesis_block, good_block)
+        Block.is_valid_block(genesis_block, bad_block)
+    except Exception as e:
+        print(f'is_valid_block: {e}')
 
 if __name__ == '__main__':
     main()
